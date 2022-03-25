@@ -1,0 +1,12 @@
+{
+  "Author": "Missing",
+  "Name": "Gearset Sorter",
+  "Punchline": "Improved gearset sorting",
+  "Description": "A description that shows up in /xlplugins. List any major slash-command(s).",
+  "InternalName": "gearsetSorter",
+  "ApplicableVersion": "any",
+  "Tags": [
+    "gearset",
+    "sorting"
+  ]
+}

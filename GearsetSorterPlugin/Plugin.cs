@@ -5,11 +5,9 @@ using Dalamud.Logging;
 using Dalamud.Plugin;
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
-using static FFXIVClientStructs.FFXIV.Client.UI.Misc.RaptureGearsetModule;
 
-namespace GearsetSorter
+namespace GearsetSorterPlugin
 {
     public unsafe class Plugin : IDalamudPlugin
     {
@@ -23,15 +21,8 @@ namespace GearsetSorter
         private PluginUI PluginUi { get; init; }
 
         protected SigScanner mSigScanner;
+
         private RaptureGearsetModule *mGearsetModule;
-
-        // Delegates
-        // Not completely sure what char is intended for but it essentially functions
-        // As a way to write to the file even if the proper flag isn't checked in memory
-        private delegate char FileWriteDelegate(byte* pModule, char forceWrite);
-
-        private static FileWriteDelegate mdGEARSETSave;
-
         public Plugin(
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
             [RequiredVersion("1.0")] CommandManager commandManager,
@@ -44,7 +35,9 @@ namespace GearsetSorter
             //TODO: Actually do the stuff lol
             //Instance the GearsetModule and write the address to log for debugging
             mGearsetModule = RaptureGearsetModule.Instance();
-            PluginLog.LogInformation($"GEARSET.DAT: {new IntPtr(mGearsetModule).ToString("x")}");
+            MemManager.Init(sigScanner);
+
+            PluginLog.LogInformation($"GEARSET.DAT: 0x{new IntPtr(mGearsetModule).ToString("x")}");
 
             this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             this.Configuration.Initialize(this.PluginInterface);
@@ -73,24 +66,6 @@ namespace GearsetSorter
         {
             // in response to the slash command, just display our main ui
             //this.PluginUi.Visible = true;
-
-            // Test write functionality
-            try
-            {
-                // Get Address of UserFileEvent_vf12
-                IntPtr fpGetFileWriteAddress = mSigScanner.ScanText("40 57 48 81 EC 50 02");
-                if (fpGetFileWriteAddress != IntPtr.Zero)
-                {
-                    mdGEARSETSave = Marshal.GetDelegateForFunctionPointer<FileWriteDelegate>(fpGetFileWriteAddress);
-                }
-
-                //Write to the file
-                mdGEARSETSave.Invoke((byte*)mGearsetModule, (char)0x01);
-            }
-            catch (Exception e)
-            {
-                throw new Exception($"Error in \"OnCommand()\" while searching for required function signatures; Raw exception as follows:\r\n{e}");
-            }
 
         }
 

@@ -2,7 +2,7 @@
 using Dalamud.Plugin;
 using System;
 
-namespace GearsetSorter
+namespace GearsetSorterPlugin
 {
     [Serializable]
     public class Configuration : IPluginConfiguration

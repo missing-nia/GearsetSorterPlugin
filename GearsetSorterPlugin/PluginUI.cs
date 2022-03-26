@@ -2,7 +2,7 @@
 using System;
 using System.Numerics;
 
-namespace GearsetSorter
+namespace GearsetSorterPlugin
 {
     // It is good to have this be disposable in general, in case you ever need it
     // to do any cleanup

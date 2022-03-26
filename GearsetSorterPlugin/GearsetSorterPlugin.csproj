@@ -6,7 +6,7 @@
     <Version>0.0.0.1</Version>
     <Description>A plugin to help with sorting gearsets</Description>
     <Copyright></Copyright>
-    <PackageProjectUrl></PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/missing-nia/GearsetSorterPlugin</PackageProjectUrl>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -29,6 +29,7 @@
 
   <PropertyGroup>
     <DalamudLibPath>$(appdata)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
+    <RepositoryUrl>https://github.com/missing-nia/GearsetSorterPlugin</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>

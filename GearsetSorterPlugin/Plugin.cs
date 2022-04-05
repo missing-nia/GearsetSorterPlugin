@@ -60,6 +60,7 @@ namespace GearsetSorterPlugin
         {
             this.PluginUi.Dispose();
             this.CommandManager.RemoveHandler(commandName);
+            MemManager.Uninit();
         }
 
         private void OnCommand(string command, string args)
@@ -67,6 +68,10 @@ namespace GearsetSorterPlugin
             // in response to the slash command, just display our main ui
             //this.PluginUi.Visible = true;
 
+            // Sorting Tests
+            // Gearsets can hold 100 gearsets so go from 0 to 99
+            MemManager.GearsetSort(mGearsetModule, 0, 99);
+            MemManager.WriteFile((byte *)mGearsetModule);
         }
 
         private void DrawUI()

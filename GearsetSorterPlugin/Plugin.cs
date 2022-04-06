@@ -21,9 +21,6 @@ namespace GearsetSorterPlugin
         private PluginUI PluginUi { get; init; }
 
         protected SigScanner mSigScanner;
-
-        private RaptureGearsetModule* mGearsetModule;
-        private RaptureHotbarModule* mHotbarModule;
         public Plugin(
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
             [RequiredVersion("1.0")] CommandManager commandManager,
@@ -33,14 +30,8 @@ namespace GearsetSorterPlugin
             this.CommandManager = commandManager;
             mSigScanner = sigScanner;
 
-            //TODO: Actually do the stuff lol
-            //Instance the GearsetModule and write the address to log for debugging
-            mGearsetModule = RaptureGearsetModule.Instance();
-            mHotbarModule = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework.Instance()->GetUiModule()->GetRaptureHotbarModule();
-
             MemManager.Init(sigScanner);
-
-            PluginLog.LogInformation($"GEARSET.DAT: 0x{new IntPtr(mGearsetModule).ToString("x")}");
+            GearsetSort.Init();
 
             this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             this.Configuration.Initialize(this.PluginInterface);
@@ -64,6 +55,7 @@ namespace GearsetSorterPlugin
             this.PluginUi.Dispose();
             this.CommandManager.RemoveHandler(commandName);
             MemManager.Uninit();
+            GearsetSort.Uninit();
         }
 
         private void OnCommand(string command, string args)
@@ -73,9 +65,11 @@ namespace GearsetSorterPlugin
 
             // Sorting Tests
             // Gearsets can hold 100 gearsets so go from 0 to 99
-            MemManager.GearsetSort(mGearsetModule, 0, 99);
-            MemManager.WriteFile((byte*)mGearsetModule);
-            MemManager.WriteFile((byte*)mHotbarModule);
+            GearsetSort.Sort(0, 99);
+
+            // Write to GEARSET.DAT and HOTBAR.DAT
+            MemManager.WriteFile((byte*)RaptureGearsetModule.Instance());
+            MemManager.WriteFile((byte*)FFXIVClientStructs.FFXIV.Client.System.Framework.Framework.Instance()->UIModule->GetRaptureHotbarModule());
         }
 
         private void DrawUI()

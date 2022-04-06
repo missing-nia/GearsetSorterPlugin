@@ -50,7 +50,7 @@ namespace GearsetSorterPlugin
         }
 
         // Quicksort
-        public unsafe static void GearsetSort(RaptureGearsetModule *pGearsetModule, int lo, int hi)
+        public unsafe static void GearsetSort(RaptureGearsetModule* pGearsetModule, int lo, int hi)
         {
             if (lo < hi)
             {
@@ -61,10 +61,10 @@ namespace GearsetSorterPlugin
             }
         }
 
-        public unsafe static int GearsetPartition(RaptureGearsetModule *pGearsetModule, int lo, int hi)
+        public unsafe static int GearsetPartition(RaptureGearsetModule* pGearsetModule, int lo, int hi)
         {
             // Get the current active gearset in memory
-            byte* currentGearset = (byte*)pGearsetModule + mCurrentGearsetOffset;
+            byte *currentGearset = (byte*)pGearsetModule + mCurrentGearsetOffset;
             //PluginLog.LogInformation($"CurrentGearset: 0x{*currentGearset}");
 
             String pivotName = System.Text.Encoding.UTF8.GetString(pGearsetModule->Gearset[hi]->Name, mGearsetEntryNameSize);
@@ -99,7 +99,7 @@ namespace GearsetSorterPlugin
             return (i + 1);
         }
 
-        public unsafe static void GearsetSwap(byte* currentGearset, RaptureGearsetModule.GearsetEntry *pGearsetA, RaptureGearsetModule.GearsetEntry* pGearsetB)
+        public unsafe static void GearsetSwap(byte* currentGearset, RaptureGearsetModule.GearsetEntry* pGearsetA, RaptureGearsetModule.GearsetEntry* pGearsetB)
         {
             if (pGearsetA == null || pGearsetB == null)
             {
@@ -118,6 +118,9 @@ namespace GearsetSorterPlugin
                 *currentGearset = pGearsetA->ID;
             }
 
+            // Update the hotbars before swapping
+            GearsetUpdateHotbars(pGearsetA, pGearsetB);
+
             // Update gearset number before swapping
             byte tempID = pGearsetA->ID;
             pGearsetA->ID = pGearsetB->ID;
@@ -132,6 +135,72 @@ namespace GearsetSorterPlugin
 
             Marshal.Copy(tempGearsetA, 0, (IntPtr)pGearsetB, gearsetEntrySize);
             Marshal.Copy(tempGearsetB, 0, (IntPtr)pGearsetA, gearsetEntrySize);
+        }
+
+        // Update the hotbar IDs every time we swap things around, both in the active set and the saved sets
+        public unsafe static void GearsetUpdateHotbars(RaptureGearsetModule.GearsetEntry* pGearsetA, RaptureGearsetModule.GearsetEntry* pGearsetB)
+        {
+            RaptureHotbarModule* pHotbarModule = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework.Instance()->GetUiModule()->GetRaptureHotbarModule();
+
+            // Iterate through all the saved hotbars and update
+            // These are what are written to the file
+            for (int i = 0; i < 60; ++i)
+            {
+                // Each of these should be a set of hotbars for any given job (10 hotbars + 8 crossbars)
+                SavedHotBars.SavedHotBarClassJob* pClassJobHotbars = pHotbarModule->SavedClassJob[i];
+                for (int j = 0; j < 18; ++j)
+                {
+                    // Each of these should be a hotbar for the given job (16 slots for crossbars)
+                    SavedHotBars.SavedHotBarClassJobBars.SavedHotBarClassJobBar* pHotbar = pClassJobHotbars->Bar[j];
+                    for (int k = 0; k < 16; ++k)
+                    {
+                        // Each of these should be a hotbar slot although in practice many should be empty or unusable
+                        SavedHotBars.SavedHotBarClassJobSlots.SavedHotBarClassJobSlot* pHotbarSlot = pHotbar->Slot[k];
+
+                        // Make sure this is a gearset slot
+                        if (pHotbarSlot->Type == HotbarSlotType.GearSet)
+                        {
+                            // Check if this slot is for either of the swapping gearsets
+                            if (pHotbarSlot->ID == pGearsetA->ID)
+                            {
+                                pHotbarSlot->ID = pGearsetB->ID;
+                            }
+                            else if (pHotbarSlot->ID == pGearsetB->ID)
+                            {
+                                pHotbarSlot->ID = pGearsetA->ID;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Iterate through the actively loaded hotbars and update
+            // These are not written to the file ever but instead are loaded 
+            // Versions of the SavedHotBars that the player can actually use
+            for (int i = 0; i < 18; ++i )
+            {
+                // Each of these should be a currently loaded hotbar in memory (16 slots for crossbars)
+                HotBar* pHotbar = pHotbarModule->HotBar[i];
+                for (int j = 0; j < 16; ++j)
+                {
+                    // Each of these should be a hotbar slot although in practice many should be empty or unusable
+                    HotBarSlot* pHotbarSlot = pHotbar->Slot[j];
+
+                    // Make sure this is a gearset slot
+                    if (pHotbarSlot->CommandType == HotbarSlotType.GearSet)
+                    {
+                        // Check if this slot is for either of the swapping gearsets
+                        if (pHotbarSlot->CommandId == pGearsetA->ID)
+                        {
+                            pHotbarSlot->Set(HotbarSlotType.GearSet, pGearsetB->ID);
+                        }
+                        else if (pHotbarSlot->CommandId == pGearsetB->ID)
+                        {
+                            pHotbarSlot->Set(HotbarSlotType.GearSet, pGearsetA->ID);
+                        }
+                    }
+                }
+            }
         }
 
         // Magic Numbers

@@ -22,7 +22,8 @@ namespace GearsetSorterPlugin
 
         protected SigScanner mSigScanner;
 
-        private RaptureGearsetModule *mGearsetModule;
+        private RaptureGearsetModule* mGearsetModule;
+        private RaptureHotbarModule* mHotbarModule;
         public Plugin(
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
             [RequiredVersion("1.0")] CommandManager commandManager,
@@ -35,6 +36,8 @@ namespace GearsetSorterPlugin
             //TODO: Actually do the stuff lol
             //Instance the GearsetModule and write the address to log for debugging
             mGearsetModule = RaptureGearsetModule.Instance();
+            mHotbarModule = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework.Instance()->GetUiModule()->GetRaptureHotbarModule();
+
             MemManager.Init(sigScanner);
 
             PluginLog.LogInformation($"GEARSET.DAT: 0x{new IntPtr(mGearsetModule).ToString("x")}");
@@ -71,7 +74,8 @@ namespace GearsetSorterPlugin
             // Sorting Tests
             // Gearsets can hold 100 gearsets so go from 0 to 99
             MemManager.GearsetSort(mGearsetModule, 0, 99);
-            MemManager.WriteFile((byte *)mGearsetModule);
+            MemManager.WriteFile((byte*)mGearsetModule);
+            MemManager.WriteFile((byte*)mHotbarModule);
         }
 
         private void DrawUI()

@@ -3,8 +3,6 @@ using System.Runtime.InteropServices;
 
 using Dalamud.Game;
 
-using FFXIVClientStructs.FFXIV.Client.UI.Misc;
-
 namespace GearsetSorterPlugin
 {
     public static class MemManager

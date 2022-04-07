@@ -1,15 +1,17 @@
-﻿using Dalamud.Game;
+﻿using System.IO;
+
+using Dalamud.Game;
 using Dalamud.Game.Command;
 using Dalamud.IoC;
-using Dalamud.Logging;
 using Dalamud.Plugin;
-using System;
-using System.IO;
+
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
+
+using GearsetSorterPlugin.Enum;
 
 namespace GearsetSorterPlugin
 {
-    public unsafe class Plugin : IDalamudPlugin
+    public class Plugin : IDalamudPlugin
     {
         public string Name => "Gearset Sorter";
 
@@ -30,8 +32,20 @@ namespace GearsetSorterPlugin
             this.CommandManager = commandManager;
             mSigScanner = sigScanner;
 
+            // Testing ClassJob sorting
+            byte[] sortOrder = { (byte)GearsetClassJob.PLD, (byte)GearsetClassJob.WAR, (byte)GearsetClassJob.DRK, (byte)GearsetClassJob.GNB,
+                                 (byte)GearsetClassJob.WHM, (byte)GearsetClassJob.SCH, (byte)GearsetClassJob.AST, (byte)GearsetClassJob.SGE,
+                                 (byte)GearsetClassJob.BLM, (byte)GearsetClassJob.SMN, (byte)GearsetClassJob.RDM, (byte)GearsetClassJob.BRD,
+                                 (byte)GearsetClassJob.MCH, (byte)GearsetClassJob.DNC, (byte)GearsetClassJob.MNK, (byte)GearsetClassJob.DRG,
+                                 (byte)GearsetClassJob.NIN, (byte)GearsetClassJob.SAM, (byte)GearsetClassJob.RPR, (byte)GearsetClassJob.GLD,
+                                 (byte)GearsetClassJob.MRD, (byte)GearsetClassJob.CNJ, (byte)GearsetClassJob.THM, (byte)GearsetClassJob.ACN,
+                                 (byte)GearsetClassJob.ARC, (byte)GearsetClassJob.PUG, (byte)GearsetClassJob.LNC, (byte)GearsetClassJob.ROG, 
+                                 (byte)GearsetClassJob.BLU, (byte)GearsetClassJob.CRP, (byte)GearsetClassJob.BSM, (byte)GearsetClassJob.ARM,
+                                 (byte)GearsetClassJob.GSM, (byte)GearsetClassJob.LTW, (byte)GearsetClassJob.WVR, (byte)GearsetClassJob.ALC,
+                                 (byte)GearsetClassJob.CUL, (byte)GearsetClassJob.MIN, (byte)GearsetClassJob.BTN, (byte)GearsetClassJob.FSH };
+
             MemManager.Init(sigScanner);
-            GearsetSort.Init();
+            GearsetSort.Init(sortOrder);
 
             this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             this.Configuration.Initialize(this.PluginInterface);
@@ -65,11 +79,21 @@ namespace GearsetSorterPlugin
 
             // Sorting Tests
             // Gearsets can hold 100 gearsets so go from 0 to 99
-            GearsetSort.Sort(0, 99);
+            if (args.Contains("Name"))
+            {
+                GearsetSort.Sort(0, 99, GearsetSort.GearsetSortType.Name);
+            }   
+            else if (args.Contains("ClassJob"))
+            {
+                GearsetSort.Sort(0, 99, GearsetSort.GearsetSortType.ClassJob);
+            }
 
             // Write to GEARSET.DAT and HOTBAR.DAT
-            MemManager.WriteFile((byte*)RaptureGearsetModule.Instance());
-            MemManager.WriteFile((byte*)FFXIVClientStructs.FFXIV.Client.System.Framework.Framework.Instance()->UIModule->GetRaptureHotbarModule());
+            unsafe
+            {
+                MemManager.WriteFile((byte*)RaptureGearsetModule.Instance());
+                MemManager.WriteFile((byte*)FFXIVClientStructs.FFXIV.Client.System.Framework.Framework.Instance()->UIModule->GetRaptureHotbarModule());
+            }
         }
 
         private void DrawUI()

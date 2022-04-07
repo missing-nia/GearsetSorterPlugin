@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-using Dalamud.Game;
 using Dalamud.Logging;
+
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 
 namespace GearsetSorterPlugin
 {
     public unsafe static class GearsetSort 
     {
-        public static void Init()
+        public static void Init(byte[] jobClassSortOrder)
         {
             mpGearsetModule = RaptureGearsetModule.Instance();
             mpHotbarModule = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework.Instance()->GetUiModule()->GetRaptureHotbarModule();
@@ -17,6 +17,11 @@ namespace GearsetSorterPlugin
             // Get the current active gearset in memory
             mpCurrentGearset = (byte*)mpGearsetModule + mCurrentGearsetOffset;
             PluginLog.LogInformation($"CurrentGearset: 0x{*mpCurrentGearset}");
+
+            // Temporarily gonna initilize this here
+            // In the future this will draw from the user
+            // Config with their own prefered sort order
+            mClassJobSortOrder = jobClassSortOrder;
         }
 
         public static void Uninit()
@@ -24,29 +29,32 @@ namespace GearsetSorterPlugin
             mpGearsetModule = null;
             mpHotbarModule = null;
             mpCurrentGearset = null;
+            mClassJobSortOrder = null;
         }
 
         // Quicksort
-        public static void Sort(int lo, int hi)
+        public static void Sort(int lo, int hi, GearsetSortType sortType)
         {
             if (lo < hi)
             {
-                int pi = Partition(lo, hi);
+                int pi = Partition(lo, hi, sortType);
 
-                Sort(lo, pi - 1);
-                Sort(pi + 1, hi);
+                Sort(lo, pi - 1, sortType);
+                Sort(pi + 1, hi, sortType);
             }
         }
 
-        private static int Partition(int lo, int hi)
+        private static int Partition(int lo, int hi, GearsetSortType sortType)
         {
             String pivotName = System.Text.Encoding.UTF8.GetString(mpGearsetModule->Gearset[hi]->Name, mGearsetEntryNameSize);
+            byte pivotClassJob = mpGearsetModule->Gearset[hi]->ClassJob;
             RaptureGearsetModule.GearsetFlag pivotFlag = mpGearsetModule->Gearset[hi]->Flags;
 
             int i = lo - 1;
             for (int j = lo; j <= hi - 1; ++j)
             {
                 String curName = System.Text.Encoding.UTF8.GetString(mpGearsetModule->Gearset[j]->Name, mGearsetEntryNameSize);
+                byte curClassJob = mpGearsetModule->Gearset[j]->ClassJob;
                 RaptureGearsetModule.GearsetFlag curFlag = mpGearsetModule->Gearset[j]->Flags;
 
                 // Sorting by unicode value so this should essentially be alphabetical
@@ -56,7 +64,18 @@ namespace GearsetSorterPlugin
                 // That we put them back there regardless
                 if (curFlag.HasFlag(RaptureGearsetModule.GearsetFlag.Exists))
                 {
-                    if (!pivotFlag.HasFlag(RaptureGearsetModule.GearsetFlag.Exists) || String.Compare(curName, pivotName, StringComparison.Ordinal) < 0)
+                    // Sort based on the sort type
+                    bool bSwap = false;
+                    if (sortType.Equals(GearsetSortType.Name))
+                    {
+                        bSwap = ShouldSwapName(pivotName, curName, pivotClassJob, curClassJob);
+                    }   
+                    else
+                    {
+                        bSwap = ShouldSwapClassJob(pivotClassJob, curClassJob, pivotName, curName);
+                    }
+
+                    if (!pivotFlag.HasFlag(RaptureGearsetModule.GearsetFlag.Exists) || bSwap)
                     {
                         ++i;
 
@@ -72,11 +91,65 @@ namespace GearsetSorterPlugin
             return (i + 1);
         }
 
+        // Check if we should swap using Name sorting
+        private static bool ShouldSwapName(String pivotName, String curName, byte pivotClassJob, byte curClassJob)
+        {
+            if (mClassJobSortOrder == null)
+            {
+                throw new Exception("Error in \"GearsetSort.ShouldSwap()\": mJobClassSortOrder is not initialized!");
+            }
+
+            // Compare the strings
+            int res = String.Compare(curName, pivotName, StringComparison.Ordinal);
+
+            if (res < 0)
+            {
+                return true;
+            }
+            else if (res == 0)
+            {
+                // Gearset names are identical so sort by ClassJob instead
+                if (Array.IndexOf(mClassJobSortOrder, curClassJob) < Array.IndexOf(mClassJobSortOrder, pivotClassJob))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Check if we should swap using ClassJob sorting
+        // TODO: Make this work idk what's wrong
+        private static bool ShouldSwapClassJob(byte pivotClassJob, byte curClassJob, String pivotName, String curName)
+        {
+            if (mClassJobSortOrder == null)
+            {
+                throw new Exception("Error in \"GearsetSort.ShouldSwap()\": mJobClassSortOrder is not initialized!");
+            }
+
+            // Check where in the priority pivot and cur are
+            int pivotClassJobPos = Array.IndexOf(mClassJobSortOrder, pivotClassJob);
+            int curClassJobPos = Array.IndexOf(mClassJobSortOrder, curClassJob);
+
+            if (curClassJobPos < pivotClassJobPos)
+            {
+                return true;
+            }
+            else if (curClassJobPos == pivotClassJobPos)
+            {
+                // Both gearsets are the same role so sort by name instead
+                if (String.Compare(curName, pivotName, StringComparison.Ordinal) < 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private static void Swap(RaptureGearsetModule.GearsetEntry* pGearsetA, RaptureGearsetModule.GearsetEntry* pGearsetB)
         {
             if (pGearsetA == null || pGearsetB == null)
             {
-                throw new Exception("Error in \"MemManager.GearsetSwap()\": Null GearsetEntry pointer.");
+                throw new Exception("Error in \"GearsetSort.Swap()\": Null GearsetEntry pointer.");
             }
 
             int gearsetEntrySize = sizeof(RaptureGearsetModule.GearsetEntry);
@@ -184,5 +257,14 @@ namespace GearsetSorterPlugin
         private static RaptureHotbarModule* mpHotbarModule;
 
         private static byte* mpCurrentGearset;
+
+        // Sort order for JobClass
+        private static byte[] ?mClassJobSortOrder;
+
+        public enum GearsetSortType
+        {
+            Name = 0,
+            ClassJob = 1
+        }
     }
 }

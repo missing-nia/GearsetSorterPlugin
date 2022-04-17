@@ -33,28 +33,24 @@ namespace GearsetSorterPlugin
         }
 
         // Quicksort
-        public static void Sort(int lo, int hi, GearsetSortType sortType)
+        public static void Sort(int lo, int hi, GearsetSortType sortTypePrimary, GearsetSortType sortTypeSecondary)
         {
             if (lo < hi)
             {
-                int pi = Partition(lo, hi, sortType);
+                int pi = Partition(lo, hi, sortTypePrimary, sortTypeSecondary);
 
-                Sort(lo, pi - 1, sortType);
-                Sort(pi + 1, hi, sortType);
+                Sort(lo, pi - 1, sortTypePrimary, sortTypeSecondary);
+                Sort(pi + 1, hi, sortTypePrimary, sortTypeSecondary);
             }
         }
 
-        private static int Partition(int lo, int hi, GearsetSortType sortType)
+        private static int Partition(int lo, int hi, GearsetSortType sortTypePrimary, GearsetSortType sortTypeSecondary)
         {
-            String pivotName = System.Text.Encoding.UTF8.GetString(mpGearsetModule->Gearset[hi]->Name, mGearsetEntryNameSize);
-            byte pivotClassJob = mpGearsetModule->Gearset[hi]->ClassJob;
             RaptureGearsetModule.GearsetFlag pivotFlag = mpGearsetModule->Gearset[hi]->Flags;
 
             int i = lo - 1;
             for (int j = lo; j <= hi - 1; ++j)
             {
-                String curName = System.Text.Encoding.UTF8.GetString(mpGearsetModule->Gearset[j]->Name, mGearsetEntryNameSize);
-                byte curClassJob = mpGearsetModule->Gearset[j]->ClassJob;
                 RaptureGearsetModule.GearsetFlag curFlag = mpGearsetModule->Gearset[j]->Flags;
 
                 // Sorting by unicode value so this should essentially be alphabetical
@@ -64,18 +60,16 @@ namespace GearsetSorterPlugin
                 // That we put them back there regardless
                 if (curFlag.HasFlag(RaptureGearsetModule.GearsetFlag.Exists))
                 {
-                    // Sort based on the sort type
-                    bool bSwap = false;
-                    if (sortType.Equals(GearsetSortType.Name))
+                    // First try to sort using the primary sort type
+                    int res = GearsetCompare(hi, j, sortTypePrimary);
+                    if (res == 0)
                     {
-                        bSwap = ShouldSwapName(pivotName, curName, pivotClassJob, curClassJob);
-                    }   
-                    else
-                    {
-                        bSwap = ShouldSwapClassJob(pivotClassJob, curClassJob, pivotName, curName);
+                        // Primary sort values are the same so sort using the secondary sort
+                        res = GearsetCompare(hi, j, sortTypeSecondary);
                     }
 
-                    if (!pivotFlag.HasFlag(RaptureGearsetModule.GearsetFlag.Exists) || bSwap)
+                    // Only sort if the pivot doesn't exist or if the current set should be earlier in the list
+                    if (!pivotFlag.HasFlag(RaptureGearsetModule.GearsetFlag.Exists) || res < 0)
                     {
                         ++i;
 
@@ -91,35 +85,37 @@ namespace GearsetSorterPlugin
             return (i + 1);
         }
 
-        // Check if we should swap using Name sorting
-        private static bool ShouldSwapName(String pivotName, String curName, byte pivotClassJob, byte curClassJob)
+        private static int GearsetCompare(int pivot, int cur, GearsetSortType sortType)
         {
-            if (mClassJobSortOrder == null)
+            if (sortType == GearsetSortType.Name)
             {
-                throw new Exception("Error in \"GearsetSort.ShouldSwap()\": mJobClassSortOrder is not initialized!");
-            }
+                // Sorting by Name
+                String pivotName = System.Text.Encoding.UTF8.GetString(mpGearsetModule->Gearset[pivot]->Name, mGearsetEntryNameSize);
+                String curName = System.Text.Encoding.UTF8.GetString(mpGearsetModule->Gearset[cur]->Name, mGearsetEntryNameSize);
 
-            // Compare the strings
-            int res = String.Compare(curName, pivotName, StringComparison.Ordinal);
+                return String.Compare(curName, pivotName, StringComparison.Ordinal);
+            }   
+            else if (sortType == GearsetSortType.ClassJob)
+            {
+                // Sorting By Class/Job
+                byte pivotClassJob = mpGearsetModule->Gearset[pivot]->ClassJob;
+                byte curClassJob = mpGearsetModule->Gearset[cur]->ClassJob;
 
-            if (res < 0)
-            {
-                return true;
+                return ClassJobComparator(pivotClassJob, curClassJob);
             }
-            else if (res == 0)
+            else if (sortType == GearsetSortType.ItemLevel)
             {
-                // Gearset names are identical so sort by ClassJob instead
-                if (Array.IndexOf(mClassJobSortOrder, curClassJob) < Array.IndexOf(mClassJobSortOrder, pivotClassJob))
-                {
-                    return true;
-                }
+                // Sorting by Item Level
+                short pivotItemLevel = mpGearsetModule->Gearset[pivot]->ItemLevel;
+                short curItemLevel = mpGearsetModule->Gearset[cur]->ItemLevel;
+
+                return curItemLevel.CompareTo(pivotItemLevel);
             }
-            return false;
+            return 1;
         }
 
-        // Check if we should swap using ClassJob sorting
         // TODO: Make this work idk what's wrong
-        private static bool ShouldSwapClassJob(byte pivotClassJob, byte curClassJob, String pivotName, String curName)
+        private static int ClassJobComparator(byte pivotClassJob, byte curClassJob)
         {
             if (mClassJobSortOrder == null)
             {
@@ -130,19 +126,15 @@ namespace GearsetSorterPlugin
             int pivotClassJobPos = Array.IndexOf(mClassJobSortOrder, pivotClassJob);
             int curClassJobPos = Array.IndexOf(mClassJobSortOrder, curClassJob);
 
-            if (curClassJobPos < pivotClassJobPos)
+            if (curClassJobPos == pivotClassJobPos)
             {
-                return true;
+                return 0;
             }
-            else if (curClassJobPos == pivotClassJobPos)
+            else if (curClassJobPos < pivotClassJobPos)
             {
-                // Both gearsets are the same role so sort by name instead
-                if (String.Compare(curName, pivotName, StringComparison.Ordinal) < 0)
-                {
-                    return true;
-                }
+                return -1;
             }
-            return false;
+            return 1;
         }
 
         private static void Swap(RaptureGearsetModule.GearsetEntry* pGearsetA, RaptureGearsetModule.GearsetEntry* pGearsetB)
@@ -264,7 +256,8 @@ namespace GearsetSorterPlugin
         public enum GearsetSortType
         {
             Name = 0,
-            ClassJob = 1
+            ClassJob = 1,
+            ItemLevel = 2,
         }
     }
 }

@@ -79,14 +79,38 @@ namespace GearsetSorterPlugin
 
             // Sorting Tests
             // Gearsets can hold 100 gearsets so go from 0 to 99
-            if (args.Contains("Name"))
+            GearsetSort.GearsetSortType sortTypePrimary = GearsetSort.GearsetSortType.Name;
+            GearsetSort.GearsetSortType sortTypeSecondary = GearsetSort.GearsetSortType.ClassJob;
+
+            string[] argsArray = args.Split(' ');
+
+            if (argsArray[0] == "Name")
             {
-                GearsetSort.Sort(0, 99, GearsetSort.GearsetSortType.Name);
-            }   
-            else if (args.Contains("ClassJob"))
-            {
-                GearsetSort.Sort(0, 99, GearsetSort.GearsetSortType.ClassJob);
+                sortTypePrimary = GearsetSort.GearsetSortType.Name;
             }
+            else if (argsArray[0] == "ClassJob")
+            {
+                sortTypePrimary = GearsetSort.GearsetSortType.ClassJob;
+            }    
+            else if (argsArray[0] == "ItemLevel")
+            {
+                sortTypePrimary = GearsetSort.GearsetSortType.ItemLevel;
+            }
+
+            if (argsArray[1] == "Name")
+            {
+                sortTypeSecondary = GearsetSort.GearsetSortType.Name;
+            }
+            else if (argsArray[1] == "ClassJob")
+            {
+                sortTypeSecondary = GearsetSort.GearsetSortType.ClassJob;
+            }
+            else if (argsArray[1] == "ItemLevel")
+            {
+                sortTypeSecondary = GearsetSort.GearsetSortType.ItemLevel;
+            }
+
+            GearsetSort.Sort(0, 99, sortTypePrimary, sortTypeSecondary);
 
             // Write to GEARSET.DAT and HOTBAR.DAT
             unsafe

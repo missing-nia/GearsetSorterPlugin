@@ -44,7 +44,7 @@ namespace GearsetSorterPlugin
                                  (byte)GearsetClassJob.GSM, (byte)GearsetClassJob.LTW, (byte)GearsetClassJob.WVR, (byte)GearsetClassJob.ALC,
                                  (byte)GearsetClassJob.CUL, (byte)GearsetClassJob.MIN, (byte)GearsetClassJob.BTN, (byte)GearsetClassJob.FSH };
 
-            MemManager.Init(sigScanner);
+            FileManager.Init(sigScanner);
             GearsetSort.Init(sortOrder);
 
             this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
@@ -68,7 +68,7 @@ namespace GearsetSorterPlugin
         {
             this.PluginUi.Dispose();
             this.CommandManager.RemoveHandler(commandName);
-            MemManager.Uninit();
+            FileManager.Uninit();
             GearsetSort.Uninit();
         }
 
@@ -91,8 +91,8 @@ namespace GearsetSorterPlugin
             // Write to GEARSET.DAT and HOTBAR.DAT
             unsafe
             {
-                MemManager.WriteFile((byte*)RaptureGearsetModule.Instance());
-                MemManager.WriteFile((byte*)FFXIVClientStructs.FFXIV.Client.System.Framework.Framework.Instance()->UIModule->GetRaptureHotbarModule());
+                FileManager.WriteFile((byte*)RaptureGearsetModule.Instance());
+                FileManager.WriteFile((byte*)FFXIVClientStructs.FFXIV.Client.System.Framework.Framework.Instance()->UIModule->GetRaptureHotbarModule());
             }
         }
 

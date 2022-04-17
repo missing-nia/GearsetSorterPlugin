@@ -5,14 +5,14 @@ using Dalamud.Game;
 
 namespace GearsetSorterPlugin
 {
-    public static class MemManager
+    public static class FileManager
     {
         public static void Init(SigScanner sigScanner)
         {
             // Check for valid SigScanner object
             if (sigScanner == null)
             {
-                throw new Exception("Error in \"MemManager.Init()\": SigScanner is null!");
+                throw new Exception("Error in \"FileManager.Init()\": SigScanner is null!");
             }
 
             // Initialize delegate for file writing
@@ -27,7 +27,7 @@ namespace GearsetSorterPlugin
             }
             catch (Exception e)
             {
-                throw new Exception($"Error in \"MemManager.Init()\" while searching for required function signatures; Raw exception as follows:\r\n{e}");
+                throw new Exception($"Error in \"FileManager.Init()\" while searching for required function signatures; Raw exception as follows:\r\n{e}");
             }
         }
 
@@ -40,7 +40,7 @@ namespace GearsetSorterPlugin
         {
             if (mdSaveFileDAT == null)
             {
-                throw new Exception("Error in \"MemManager.WriteFile()\": mdSaveFileDAT is not initialized!");
+                throw new Exception("Error in \"FileManager.WriteFile()\": mdSaveFileDAT is not initialized!");
             }
 
             // Write to the file

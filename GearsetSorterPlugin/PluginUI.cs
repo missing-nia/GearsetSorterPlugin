@@ -8,35 +8,31 @@ namespace GearsetSorterPlugin
     // to do any cleanup
     class PluginUI : IDisposable
     {
-        private Configuration configuration;
-
-        private ImGuiScene.TextureWrap goatImage;
+        private Configuration mConfiguration;
 
         // this extra bool exists for ImGui, since you can't ref a property
-        private bool visible = false;
+        private bool mVisible = false;
         public bool Visible
         {
-            get { return this.visible; }
-            set { this.visible = value; }
+            get { return mVisible; }
+            set { mVisible = value; }
         }
 
-        private bool settingsVisible = false;
+        private bool mSettingsVisible = false;
         public bool SettingsVisible
         {
-            get { return this.settingsVisible; }
-            set { this.settingsVisible = value; }
+            get { return mSettingsVisible; }
+            set { mSettingsVisible = value; }
         }
 
         // passing in the image here just for simplicity
         public PluginUI(Configuration configuration, ImGuiScene.TextureWrap goatImage)
         {
-            this.configuration = configuration;
-            this.goatImage = goatImage;
+            mConfiguration = configuration;
         }
 
         public void Dispose()
         {
-            this.goatImage.Dispose();
         }
 
         public void Draw()
@@ -61,9 +57,9 @@ namespace GearsetSorterPlugin
 
             ImGui.SetNextWindowSize(new Vector2(375, 330), ImGuiCond.FirstUseEver);
             ImGui.SetNextWindowSizeConstraints(new Vector2(375, 330), new Vector2(float.MaxValue, float.MaxValue));
-            if (ImGui.Begin("My Amazing Window", ref this.visible, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
+            if (ImGui.Begin("My Amazing Window", ref mVisible, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
             {
-                ImGui.Text($"The random config bool is {this.configuration.SomePropertyToBeSavedAndWithADefault}");
+                ImGui.Text($"The random config bool is {mConfiguration.SomePropertyToBeSavedAndWithADefault}");
 
                 if (ImGui.Button("Show Settings"))
                 {
@@ -72,9 +68,7 @@ namespace GearsetSorterPlugin
 
                 ImGui.Spacing();
 
-                ImGui.Text("Have a goat:");
                 ImGui.Indent(55);
-                ImGui.Image(this.goatImage.ImGuiHandle, new Vector2(this.goatImage.Width, this.goatImage.Height));
                 ImGui.Unindent(55);
             }
             ImGui.End();
@@ -87,17 +81,16 @@ namespace GearsetSorterPlugin
                 return;
             }
 
-            ImGui.SetNextWindowSize(new Vector2(232, 75), ImGuiCond.Always);
-            if (ImGui.Begin("A Wonderful Configuration Window", ref this.settingsVisible,
-                ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
+            if (ImGui.Begin("Gearset Settings", ref mSettingsVisible,
+                ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
             {
                 // can't ref a property, so use a local copy
-                var configValue = this.configuration.SomePropertyToBeSavedAndWithADefault;
+                var configValue = mConfiguration.SomePropertyToBeSavedAndWithADefault;
                 if (ImGui.Checkbox("Random Config Bool", ref configValue))
                 {
-                    this.configuration.SomePropertyToBeSavedAndWithADefault = configValue;
+                    mConfiguration.SomePropertyToBeSavedAndWithADefault = configValue;
                     // can save immediately on change, if you don't want to provide a "Save and Close" button
-                    this.configuration.Save();
+                    mConfiguration.Save();
                 }
             }
             ImGui.End();

@@ -1,6 +1,6 @@
 ﻿using ImGuiNET;
 using System;
-using System.Numerics;
+using GearsetSorterPlugin.Enum;
 
 namespace GearsetSorterPlugin
 {
@@ -10,14 +10,6 @@ namespace GearsetSorterPlugin
     {
         private Configuration mConfiguration;
 
-        // this extra bool exists for ImGui, since you can't ref a property
-        private bool mVisible = false;
-        public bool Visible
-        {
-            get { return mVisible; }
-            set { mVisible = value; }
-        }
-
         private bool mSettingsVisible = false;
         public bool SettingsVisible
         {
@@ -26,7 +18,7 @@ namespace GearsetSorterPlugin
         }
 
         // passing in the image here just for simplicity
-        public PluginUI(Configuration configuration, ImGuiScene.TextureWrap goatImage)
+        public PluginUI(Configuration configuration)
         {
             mConfiguration = configuration;
         }
@@ -37,41 +29,7 @@ namespace GearsetSorterPlugin
 
         public void Draw()
         {
-            // This is our only draw handler attached to UIBuilder, so it needs to be
-            // able to draw any windows we might have open.
-            // Each method checks its own visibility/state to ensure it only draws when
-            // it actually makes sense.
-            // There are other ways to do this, but it is generally best to keep the number of
-            // draw delegates as low as possible.
-
-            DrawMainWindow();
             DrawSettingsWindow();
-        }
-
-        public void DrawMainWindow()
-        {
-            if (!Visible)
-            {
-                return;
-            }
-
-            ImGui.SetNextWindowSize(new Vector2(375, 330), ImGuiCond.FirstUseEver);
-            ImGui.SetNextWindowSizeConstraints(new Vector2(375, 330), new Vector2(float.MaxValue, float.MaxValue));
-            if (ImGui.Begin("My Amazing Window", ref mVisible, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
-            {
-                ImGui.Text($"The random config bool is {mConfiguration.SomePropertyToBeSavedAndWithADefault}");
-
-                if (ImGui.Button("Show Settings"))
-                {
-                    SettingsVisible = true;
-                }
-
-                ImGui.Spacing();
-
-                ImGui.Indent(55);
-                ImGui.Unindent(55);
-            }
-            ImGui.End();
         }
 
         public void DrawSettingsWindow()
@@ -84,16 +42,184 @@ namespace GearsetSorterPlugin
             if (ImGui.Begin("Gearset Settings", ref mSettingsVisible,
                 ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
             {
-                // can't ref a property, so use a local copy
-                var configValue = mConfiguration.SomePropertyToBeSavedAndWithADefault;
-                if (ImGui.Checkbox("Random Config Bool", ref configValue))
+                // Drop down list for primary sort
+                var primarySort = mConfiguration.PrimarySort;
+                if (ImGui.BeginCombo("Primary Sort", GearsetSortTypeString((GearsetSortType)primarySort)))
                 {
-                    mConfiguration.SomePropertyToBeSavedAndWithADefault = configValue;
-                    // can save immediately on change, if you don't want to provide a "Save and Close" button
-                    mConfiguration.Save();
+                    ImGui.Separator();
+
+                    // List all of the available sorting types
+                    for (var sortType = 0; sortType < System.Enum.GetNames(typeof(GearsetSortType)).Length; ++sortType)
+                    {
+                        if (!ImGui.Selectable(GearsetSortTypeString((GearsetSortType)sortType)))
+                        {
+                            continue;
+                        }
+
+                        mConfiguration.PrimarySort = sortType;
+                        if (mConfiguration.PrimarySort == mConfiguration.SecondarySort)
+                        {
+                            // Change the secondary sort if the primary sort is changed to the same thing
+                            switch ((GearsetSortType)mConfiguration.PrimarySort)
+                            {
+                                case GearsetSortType.Name:
+                                    mConfiguration.SecondarySort = (int)GearsetSortType.ClassJob;
+                                    break;
+                                case GearsetSortType.ClassJob:
+                                    mConfiguration.SecondarySort = (int)GearsetSortType.ItemLevel;
+                                    break;
+                                case GearsetSortType.ItemLevel:
+                                    mConfiguration.SecondarySort = (int)GearsetSortType.Name;
+                                    break;
+                            }
+                        }
+                        mConfiguration.Save();
+                    }
+                    ImGui.EndCombo();
+                }
+                ImGui.SameLine();
+                HelpMarker(
+                    "Gearsets will be sorted using this first\n\n" +
+                    "Name will sort gearsets alphabetically\n" +
+                    "Class/Job will sort gearsets by a customizable class/job order\n" +
+                    "Item Level will sort gearsets by item level (ilvl)");
+
+                // Drop down list for secondary sort
+                var secondarySort = mConfiguration.SecondarySort;
+                if (ImGui.BeginCombo("Secondary Sort", GearsetSortTypeString((GearsetSortType)secondarySort)))
+                {
+                    ImGui.Separator();
+
+                    // List all of the available sorting types
+                    for (var sortType = 0; sortType < System.Enum.GetNames(typeof(GearsetSortType)).Length; ++sortType)
+                    {
+                        // Don't draw a sort type if it's already the primary sorting type
+                        if (sortType != mConfiguration.PrimarySort)
+                        {
+                            if (!ImGui.Selectable(GearsetSortTypeString((GearsetSortType)sortType)))
+                            {
+                                continue;
+                            }
+
+                            mConfiguration.SecondarySort = sortType;
+                            mConfiguration.Save();
+                        }
+                    }
+                    ImGui.EndCombo();
+                }
+                ImGui.SameLine();
+                HelpMarker(
+                    "Gearsets will be sorted using this in the case that first sort values are equal (i.e. sorted by \"Name\" and both gearsets are named \"Paladin\")\n\n" +
+                    "Name will sort gearsets alphabetically\n" +
+                    "Class/Job will sort gearsets by a customizable class/job order\n" +
+                    "Item Level will sort gearsets by item level (ilvl)");
+
+                // Sort order that will be used for ClassJob sorting
+                // TODO: render this in its own window (very large maybe work on that?) 
+                // TODO: add job icons and maybe color coding (it's really hard to find what you're looking for quickly)
+                if (ImGui.CollapsingHeader("Class/Job Sort Order"))
+                {
+                    if (ImGui.TreeNode("Class/Job sorting order"))
+                    {
+                        var sortOrder = mConfiguration.ClassJobSortOrder;
+                        for (var i = 0; i < sortOrder.Length; ++i)
+                        {
+                            var classJob = sortOrder[i];
+                            var classJobString = GearsetClassJobString((GearsetClassJob)classJob);
+                            ImGui.Selectable(classJobString);
+
+                            if (ImGui.IsItemActive() && !ImGui.IsItemHovered())
+                            {
+                                // Update sort order when elements are dragged around
+                                var next = i + (ImGui.GetMouseDragDelta(ImGuiMouseButton.Left).Y < 0.0f ? -1 : 1);
+                                if (next >= 0 && next < sortOrder.Length)
+                                {
+                                    sortOrder[i] = sortOrder[next];
+                                    sortOrder[next] = classJob;
+                                    mConfiguration.ClassJobSortOrder = sortOrder;
+                                    mConfiguration.Save();
+
+                                    ImGui.ResetMouseDragDelta();
+                                }
+                            }
+                        }
+                        ImGui.TreePop();
+                    }
                 }
             }
             ImGui.End();
         }
+
+        // Adapted from https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp
+        // Hover over help text for difference config settings
+        private void HelpMarker(string desc)
+        {
+            ImGui.TextDisabled("(?)");
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.PushTextWrapPos(ImGui.GetFontSize()* 35.0f);
+                ImGui.TextUnformatted(desc);
+                ImGui.PopTextWrapPos();
+                ImGui.EndTooltip();
+            }
+        }
+
+        // Conversion from GearsetSortType to UI strings
+        public static string GearsetSortTypeString(GearsetSortType sortType) =>
+            sortType switch
+            {
+                GearsetSortType.Name => "Name",
+                GearsetSortType.ClassJob => "Class/Job",
+                GearsetSortType.ItemLevel => "Item Level",
+                _ => throw new System.ArgumentException(message: "invalid enum value", paramName: nameof(sortType)),
+            };
+
+        // Conversion from GearsetClassJob to UI strings
+        public static string GearsetClassJobString(GearsetClassJob classJob) =>
+            classJob switch
+            {
+                GearsetClassJob.GLD => "GLD",
+                GearsetClassJob.PUG => "PUG",
+                GearsetClassJob.MRD => "MRD",
+                GearsetClassJob.LNC => "LNC",
+                GearsetClassJob.ARC => "ARC",
+                GearsetClassJob.CNJ => "CNJ",
+                GearsetClassJob.THM => "THM",
+                GearsetClassJob.CRP => "CRP",
+                GearsetClassJob.BSM => "BSM",
+                GearsetClassJob.ARM => "ARM",
+                GearsetClassJob.GSM => "GSM",
+                GearsetClassJob.LTW => "LTW",
+                GearsetClassJob.WVR => "WVR",
+                GearsetClassJob.ALC => "ALC",
+                GearsetClassJob.CUL => "CUL",
+                GearsetClassJob.MIN => "MIN",
+                GearsetClassJob.BTN => "BTN",
+                GearsetClassJob.FSH => "FSH",
+                GearsetClassJob.PLD => "PLD",
+                GearsetClassJob.MNK => "MNK",
+                GearsetClassJob.WAR => "WAR",
+                GearsetClassJob.DRG => "DRG",
+                GearsetClassJob.BRD => "BRD",
+                GearsetClassJob.WHM => "WHM",
+                GearsetClassJob.BLM => "BLM",
+                GearsetClassJob.ACN => "ACN",
+                GearsetClassJob.SMN => "SMN",
+                GearsetClassJob.SCH => "SCH",
+                GearsetClassJob.ROG => "ROG",
+                GearsetClassJob.NIN => "NIN",
+                GearsetClassJob.MCH => "MCH",
+                GearsetClassJob.DRK => "DRK",
+                GearsetClassJob.AST => "AST",
+                GearsetClassJob.SAM => "SAM",
+                GearsetClassJob.RDM => "RDM",
+                GearsetClassJob.BLU => "BLU",
+                GearsetClassJob.GNB => "GNB",
+                GearsetClassJob.DNC => "DNC",
+                GearsetClassJob.RPR => "RPR",
+                GearsetClassJob.SGE => "SGE",
+                _ => throw new System.ArgumentException(message: "invalid enum value", paramName: nameof(classJob)),
+            };
     }
 }

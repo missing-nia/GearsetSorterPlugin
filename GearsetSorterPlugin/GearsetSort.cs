@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-
 using Dalamud.Logging;
-
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
+using GearsetSorterPlugin.Enum;
 
 namespace GearsetSorterPlugin
 {
     public unsafe static class GearsetSort 
     {
-        public static void Init(byte[] jobClassSortOrder)
+        public static void Init(byte[] sortOrder)
         {
             mpGearsetModule = RaptureGearsetModule.Instance();
             mpHotbarModule = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework.Instance()->GetUiModule()->GetRaptureHotbarModule();
@@ -18,10 +17,7 @@ namespace GearsetSorterPlugin
             mpCurrentGearset = (byte*)mpGearsetModule + mCurrentGearsetOffset;
             PluginLog.LogInformation($"CurrentGearset: 0x{*mpCurrentGearset}");
 
-            // Temporarily gonna initilize this here
-            // In the future this will draw from the user
-            // Config with their own prefered sort order
-            mClassJobSortOrder = jobClassSortOrder;
+            mClassJobSortOrder = sortOrder;
         }
 
         public static void Uninit()
@@ -30,6 +26,10 @@ namespace GearsetSorterPlugin
             mpHotbarModule = null;
             mpCurrentGearset = null;
             mClassJobSortOrder = null;
+        }
+        public static void setClassJobSortOrder(byte[] sortOrder)
+        {
+            mClassJobSortOrder = sortOrder;
         }
 
         // Quicksort
@@ -114,7 +114,6 @@ namespace GearsetSorterPlugin
             return 1;
         }
 
-        // TODO: Make this work idk what's wrong
         private static int ClassJobComparator(byte pivotClassJob, byte curClassJob)
         {
             if (mClassJobSortOrder == null)
@@ -252,12 +251,5 @@ namespace GearsetSorterPlugin
 
         // Sort order for JobClass
         private static byte[] ?mClassJobSortOrder;
-
-        public enum GearsetSortType
-        {
-            Name = 0,
-            ClassJob = 1,
-            ItemLevel = 2,
-        }
     }
 }

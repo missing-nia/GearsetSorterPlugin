@@ -1,5 +1,4 @@
 ﻿using System.IO;
-
 using Dalamud.Game;
 using Dalamud.Game.Command;
 using Dalamud.IoC;
@@ -32,28 +31,13 @@ namespace GearsetSorterPlugin
             this.CommandManager = commandManager;
             mSigScanner = sigScanner;
 
-            // Testing ClassJob sorting
-            byte[] sortOrder = { (byte)GearsetClassJob.PLD, (byte)GearsetClassJob.WAR, (byte)GearsetClassJob.DRK, (byte)GearsetClassJob.GNB,
-                                 (byte)GearsetClassJob.WHM, (byte)GearsetClassJob.SCH, (byte)GearsetClassJob.AST, (byte)GearsetClassJob.SGE,
-                                 (byte)GearsetClassJob.BLM, (byte)GearsetClassJob.SMN, (byte)GearsetClassJob.RDM, (byte)GearsetClassJob.BRD,
-                                 (byte)GearsetClassJob.MCH, (byte)GearsetClassJob.DNC, (byte)GearsetClassJob.MNK, (byte)GearsetClassJob.DRG,
-                                 (byte)GearsetClassJob.NIN, (byte)GearsetClassJob.SAM, (byte)GearsetClassJob.RPR, (byte)GearsetClassJob.GLD,
-                                 (byte)GearsetClassJob.MRD, (byte)GearsetClassJob.CNJ, (byte)GearsetClassJob.THM, (byte)GearsetClassJob.ACN,
-                                 (byte)GearsetClassJob.ARC, (byte)GearsetClassJob.PUG, (byte)GearsetClassJob.LNC, (byte)GearsetClassJob.ROG, 
-                                 (byte)GearsetClassJob.BLU, (byte)GearsetClassJob.CRP, (byte)GearsetClassJob.BSM, (byte)GearsetClassJob.ARM,
-                                 (byte)GearsetClassJob.GSM, (byte)GearsetClassJob.LTW, (byte)GearsetClassJob.WVR, (byte)GearsetClassJob.ALC,
-                                 (byte)GearsetClassJob.CUL, (byte)GearsetClassJob.MIN, (byte)GearsetClassJob.BTN, (byte)GearsetClassJob.FSH };
-
-            FileManager.Init(sigScanner);
-            GearsetSort.Init(sortOrder);
-
             this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             this.Configuration.Initialize(this.PluginInterface);
 
-            // you might normally want to embed resources and load them from the manifest stream
-            var imagePath = Path.Combine(PluginInterface.AssemblyLocation.Directory?.FullName!, "goat.png");
-            var goatImage = this.PluginInterface.UiBuilder.LoadImage(imagePath);
-            this.PluginUi = new PluginUI(this.Configuration, goatImage);
+            FileManager.Init(sigScanner);
+            GearsetSort.Init(this.Configuration.ClassJobSortOrder);
+
+            this.PluginUi = new PluginUI(this.Configuration);
 
             this.CommandManager.AddHandler(commandName, new CommandInfo(OnCommand)
             {
@@ -74,42 +58,41 @@ namespace GearsetSorterPlugin
 
         private void OnCommand(string command, string args)
         {
-            // in response to the slash command, just display our main ui
-            //this.PluginUi.Visible = true;
-
             // Sorting Tests
             // Gearsets can hold 100 gearsets so go from 0 to 99
-            GearsetSort.GearsetSortType sortTypePrimary = GearsetSort.GearsetSortType.Name;
-            GearsetSort.GearsetSortType sortTypeSecondary = GearsetSort.GearsetSortType.ClassJob;
+            GearsetSortType sortTypePrimary = (GearsetSortType)this.Configuration.PrimarySort;
+            GearsetSortType sortTypeSecondary = (GearsetSortType)this.Configuration.SecondarySort;
 
-            string[] argsArray = args.Split(' ');
+            /*string[] argsArray = args.Split(' ');
 
             if (argsArray[0] == "Name")
             {
-                sortTypePrimary = GearsetSort.GearsetSortType.Name;
+                sortTypePrimary = GearsetSortType.Name;
             }
             else if (argsArray[0] == "ClassJob")
             {
-                sortTypePrimary = GearsetSort.GearsetSortType.ClassJob;
+                sortTypePrimary = GearsetSortType.ClassJob;
             }    
             else if (argsArray[0] == "ItemLevel")
             {
-                sortTypePrimary = GearsetSort.GearsetSortType.ItemLevel;
+                sortTypePrimary = GearsetSortType.ItemLevel;
             }
 
             if (argsArray[1] == "Name")
             {
-                sortTypeSecondary = GearsetSort.GearsetSortType.Name;
+                sortTypeSecondary = GearsetSortType.Name;
             }
             else if (argsArray[1] == "ClassJob")
             {
-                sortTypeSecondary = GearsetSort.GearsetSortType.ClassJob;
+                sortTypeSecondary = GearsetSortType.ClassJob;
             }
             else if (argsArray[1] == "ItemLevel")
             {
-                sortTypeSecondary = GearsetSort.GearsetSortType.ItemLevel;
-            }
+                sortTypeSecondary = GearsetSortType.ItemLevel;
+            }*/
 
+            // Update the sort order before sorting (just in case)
+            GearsetSort.setClassJobSortOrder(this.Configuration.ClassJobSortOrder);
             GearsetSort.Sort(0, 99, sortTypePrimary, sortTypeSecondary);
 
             // Write to GEARSET.DAT and HOTBAR.DAT

@@ -26,10 +26,21 @@ namespace GearsetSorterPlugin
             mpHotbarModule = null;
             mpCurrentGearset = null;
             mClassJobSortOrder = null;
+            mReverseItemLevelSort = false;
+            mReverseNameSort = false;
         }
         public static void setClassJobSortOrder(byte[] sortOrder)
         {
             mClassJobSortOrder = sortOrder;
+        }
+        public static void setItemLevelSort(bool reverseItemLevelSort)
+        {
+            mReverseItemLevelSort = reverseItemLevelSort;
+        }
+
+        public static void setNameSort(bool reverseNameSort)
+        {
+            mReverseNameSort = reverseNameSort;
         }
 
         // Quicksort
@@ -62,14 +73,16 @@ namespace GearsetSorterPlugin
                 {
                     // First try to sort using the primary sort type
                     int res = GearsetCompare(hi, j, sortTypePrimary);
+                    bool shouldSwap = ShouldSwap(res, sortTypePrimary);
                     if (res == 0)
                     {
                         // Primary sort values are the same so sort using the secondary sort
                         res = GearsetCompare(hi, j, sortTypeSecondary);
+                        shouldSwap = ShouldSwap(res, sortTypeSecondary);
                     }
 
                     // Only sort if the pivot doesn't exist or if the current set should be earlier in the list
-                    if (!pivotFlag.HasFlag(RaptureGearsetModule.GearsetFlag.Exists) || res < 0)
+                    if (!pivotFlag.HasFlag(RaptureGearsetModule.GearsetFlag.Exists) || shouldSwap)
                     {
                         ++i;
 
@@ -83,6 +96,26 @@ namespace GearsetSorterPlugin
             }
             Swap(mpGearsetModule->Gearset[i + 1], mpGearsetModule->Gearset[hi]);
             return (i + 1);
+        }
+
+        // Helper function to identify if the current gearsets should be swapped
+        // This helps facilitate easier use of reverse item level and name sorting
+        private static bool ShouldSwap(int res, GearsetSortType sortType)
+        {
+            // Check if the sort needs to be reversed
+            if ((sortType == GearsetSortType.Name && mReverseNameSort) ||
+                (sortType == GearsetSortType.ItemLevel && mReverseItemLevelSort))
+            {
+                if (res > 0)
+                {
+                    return true;
+                }    
+            }
+            else if (res < 0)
+            {
+                return true;
+            }
+            return false;
         }
 
         private static int GearsetCompare(int pivot, int cur, GearsetSortType sortType)
@@ -251,5 +284,7 @@ namespace GearsetSorterPlugin
 
         // Sort order for JobClass
         private static byte[] ?mClassJobSortOrder;
+        private static bool mReverseItemLevelSort;
+        private static bool mReverseNameSort;
     }
 }

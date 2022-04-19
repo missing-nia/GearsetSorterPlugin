@@ -17,6 +17,9 @@ namespace GearsetSorterPlugin
 
         public int SecondarySort { get; set; } = 1;
 
+        public bool SortItemLevelReverse { get; set; } = true;
+        public bool SortNameReverse { get; set; } = false;
+
         public byte[] ClassJobSortOrder { get; set; } = { (byte)GearsetClassJob.PLD, (byte)GearsetClassJob.WAR, (byte)GearsetClassJob.DRK, (byte)GearsetClassJob.GNB,
                                                           (byte)GearsetClassJob.WHM, (byte)GearsetClassJob.SCH, (byte)GearsetClassJob.AST, (byte)GearsetClassJob.SGE,
                                                           (byte)GearsetClassJob.MNK, (byte)GearsetClassJob.DRG, (byte)GearsetClassJob.NIN, (byte)GearsetClassJob.SAM,

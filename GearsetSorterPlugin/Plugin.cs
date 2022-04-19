@@ -89,10 +89,13 @@ namespace GearsetSorterPlugin
             else if (argsArray[1] == "ItemLevel")
             {
                 sortTypeSecondary = GearsetSortType.ItemLevel;
-            }*/
+            }*/ 
 
             // Update the sort order before sorting (just in case)
+            // TODO: put these updates in a function somewhere maybe
             GearsetSort.setClassJobSortOrder(this.Configuration.ClassJobSortOrder);
+            GearsetSort.setItemLevelSort(this.Configuration.SortItemLevelReverse);
+            GearsetSort.setNameSort(this.Configuration.SortNameReverse);
             GearsetSort.Sort(0, 99, sortTypePrimary, sortTypeSecondary);
 
             // Write to GEARSET.DAT and HOTBAR.DAT

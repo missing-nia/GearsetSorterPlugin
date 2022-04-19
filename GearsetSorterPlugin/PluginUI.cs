@@ -114,6 +114,32 @@ namespace GearsetSorterPlugin
                     "Class/Job will sort gearsets by a customizable class/job order\n" +
                     "Item Level will sort gearsets by item level (ilvl)");
 
+                // Reverse item level sorting order
+                var sortItemLevelReverse = mConfiguration.SortItemLevelReverse;
+                if (ImGui.Checkbox("Sort Item Level From Greatest to Least", ref sortItemLevelReverse))
+                {
+                    mConfiguration.SortItemLevelReverse = sortItemLevelReverse;
+                    mConfiguration.Save();
+                }
+                ImGui.SameLine();
+                HelpMarker(
+                    "Item level sorting by default sorts from least to greatest (i.e. 1,2,3)\n\n" +
+                    "When this setting is enabled item level sorting\n" +
+                    "will instead sort in reverse (i.e. 3,2,1)");
+
+                // Reverse name sorting order
+                var sortNameReverse = mConfiguration.SortNameReverse;
+                if (ImGui.Checkbox("Sort Name in Reverse", ref sortNameReverse))
+                {
+                    mConfiguration.SortNameReverse = sortNameReverse;
+                    mConfiguration.Save();
+                }
+                ImGui.SameLine();
+                HelpMarker(
+                    "Name sorting by default sorts alphabetically (i.e. a,b,c)\n\n" +
+                    "When this setting is enabled name sorting\n" +
+                    "will instead sort in reverse (i.e. c,b,a)");
+
                 // Sort order that will be used for ClassJob sorting
                 // TODO: render this in its own window (very large maybe work on that?) 
                 // TODO: add job icons and maybe color coding (it's really hard to find what you're looking for quickly)
